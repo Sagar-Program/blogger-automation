@@ -32,37 +32,122 @@ def get_access_token():
         raise ValueError("access_token not found in response")
     return data["access_token"]
 
-# === Step 2: Generate Blog Content ===
+# === Step 2: Generate Full Blog Content ===
 def generate_blog_content():
-    titles = [
-        "The Future of AI: What’s Next?",
-        "Top 5 Tools Every Developer Should Know",
-        "How Automation is Changing Our World",
-        "The Rise of Smart Tourism in 2025",
-        "Why Coding is the New Literacy"
+    # --- Example topics ---
+    topics = [
+        {"category": "Personal Life", "angle": "Morning routine for productivity"},
+        {"category": "Food & Recipes", "angle": "Quick 20-min healthy meals"},
+        {"category": "Travel", "angle": "Weekend mini-itinerary for Bangkok"},
+        {"category": "Productivity", "angle": "Using Pomodoro for deep work"},
+        {"category": "Health & Fitness", "angle": "Home HIIT workout for beginners"}
     ]
-    paragraphs = [
-        "Technology is evolving at an incredible pace, and artificial intelligence is at the forefront.",
-        "Developers today have access to powerful tools that make coding faster and smarter.",
-        "Automation is not just about efficiency; it's about reshaping industries.",
-        "Tourism is entering a new era with smart cities and AI-driven experiences.",
-        "Learning to code is becoming as important as reading and writing in today’s world."
+    topic = random.choice(topics)
+
+    # --- Meta info ---
+    meta_title = f"{topic['angle']} - {topic['category']}"
+    meta_description = f"Learn {topic['angle']} in {topic['category']} to boost your life. Practical tips and examples included."
+
+    # --- TL;DR bullets ---
+    tldr = [
+        "- Quick overview of the topic",
+        "- Step-by-step actionable tips",
+        "- Practical example included"
     ]
-    title = random.choice(titles)
-    body = f"""
-<h2>{title}</h2>
-<p>{random.choice(paragraphs)}</p>
-<p>Published on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-"""
-    return title, body
+
+    # --- H1 title ---
+    h1_title = topic['angle']
+
+    # --- H2 sections with H3 subpoints ---
+    sections = [
+        {"h2": "Introduction", "content": f"This post explores {topic['angle']} in detail for readers interested in {topic['category']}."},
+        {"h2": "Step 1: Preparation", "h3": ["Gather necessary tools", "Plan your approach"]},
+        {"h2": "Step 2: Execution", "h3": ["Follow steps carefully", "Avoid common mistakes"]},
+        {"h2": "Pro Tips", "content": "Always track your progress and adjust as needed."},
+    ]
+
+    # --- Callout box ---
+    callout = {
+        "title": "Pro Tip",
+        "bullets": ["Be consistent", "Use small steps", "Track results"]
+    }
+
+    # --- Example scenario ---
+    example = "Imagine you start your morning with a 15-minute focused task session, followed by a quick review of your daily goals."
+
+    # --- Images ---
+    images = [
+        {"url": "https://via.placeholder.com/600x400", "alt": "Example image", "caption": "Illustrative image of the topic", "credit": "Photo: Unsplash"}
+    ]
+
+    # --- Conclusion ---
+    conclusion = "Following these steps consistently will help you master the topic. Remember, practice and reflection are key."
+
+    # --- CTAs ---
+    ctas = [
+        "Enjoyed this? Leave a comment with your thoughts or questions.",
+        "Follow the blog for three new posts every week.",
+        "Get fresh guides in your inbox—subscribe to never miss Monday, Wednesday, and Friday drops."
+    ]
+
+    # --- Internal & external links placeholders ---
+    links = [
+        "[Link: Related Post Title]",
+        "[External Reference 1]",
+        "[External Reference 2]"
+    ]
+
+    # --- Construct Markdown ---
+    content = f"<!-- Angle: {topic['angle']} -->\n"
+    content += f"# {h1_title}\n\n"
+    content += f"**Meta Title:** {meta_title}\n\n"
+    content += f"**Meta Description:** {meta_description}\n\n"
+    content += "**TL;DR:**\n"
+    for bullet in tldr:
+        content += f"- {bullet}\n"
+    content += "\n"
+
+    for sec in sections:
+        content += f"## {sec['h2']}\n"
+        if "content" in sec:
+            content += f"{sec['content']}\n"
+        if "h3" in sec:
+            for sub in sec['h3']:
+                content += f"### {sub}\n"
+                content += "Explanation goes here.\n"
+        content += "\n"
+
+    # Callout
+    content += f"### {callout['title']}\n"
+    for b in callout['bullets']:
+        content += f"- {b}\n"
+    content += "\n"
+
+    # Example
+    content += f"**Example Scenario:** {example}\n\n"
+
+    # Images
+    for img in images:
+        content += f"![{img['alt']}]({img['url']})\n"
+        content += f"*{img['caption']}*\n"
+        content += f"{img['credit']}\n\n"
+
+    # Conclusion
+    content += f"## Conclusion\n{conclusion}\n\n"
+
+    # CTAs
+    for cta in ctas:
+        content += f"{cta}\n"
+
+    # Links
+    content += "\n".join(links)
+
+    return h1_title, content
 
 # === Step 3: Post to Blogger ===
 def post_to_blogger(access_token, title, content):
     url = f"https://www.googleapis.com/blogger/v3/blogs/{BLOG_ID}/posts/"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
-    }
+    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
     payload = {
         "kind": "blogger#post",
         "title": title,
