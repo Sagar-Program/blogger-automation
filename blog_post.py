@@ -1,140 +1,73 @@
 import os
-import random
-import datetime
 import requests
+import datetime
+import random
 
-# Blogger API details (your Blog ID is hardcoded here)
-BLOG_ID = "4221948764114299957"
-CLIENT_ID = os.getenv("CLIENT_ID")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
-REFRESH_TOKEN = os.getenv("REFRESH_TOKEN")
-
-# ==== BLOG GENERATION SETTINGS ====
-CATEGORIES = [
-    "Personal Life and Stories",
-    "Food and Recipes",
-    "Travel",
-    "How-To Guides and Tutorials",
-    "Product Reviews",
-    "Money and Finance",
-    "Productivity",
-    "Health and Fitness",
-    "Fashion",
-    "Lists and Roundups",
-]
-
-# Simple memory of recent topics to avoid duplicates (30 days logic would need persistence in a real DB)
-recent_titles = []
-
+# ✅ Step 1: Get access token safely
 def get_access_token():
-    """Get access token using refresh token"""
-    url = "https://oauth2.googleapis.com/token"
-    data = {
-        "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET,
-        "refresh_token": REFRESH_TOKEN,
-        "grant_type": "refresh_token",
-    }
-    response = requests.post(url, data=data)
-    return response.json()["access_token"]
+    client_id = os.environ["CLIENT_ID"]
+    client_secret = os.environ["CLIENT_SECRET"]
+    refresh_token = os.environ["REFRESH_TOKEN"]
 
-def generate_blog_post():
-    """Generate structured blog content based on Master Prompt rules"""
-    today = datetime.datetime.now().strftime("%B %d, %Y")
-    category = random.choice(CATEGORIES)
-
-    # Example dynamic angle
-    angles = {
-        "Travel": "Budget-friendly destinations in 2025",
-        "Food and Recipes": "Quick, healthy weekday meals",
-        "Health and Fitness": "Beginner-friendly home workouts",
-        "Money and Finance": "Simple tips to save money in 2025",
-        "Productivity": "Habits that improve focus",
-        "Fashion": "Trendy outfits for this season",
-        "Personal Life and Stories": "A personal growth story",
-        "Lists and Roundups": "Top 10 style list",
-        "Product Reviews": "Testing a new gadget",
-        "How-To Guides and Tutorials": "Step-by-step beginner guide",
+    token_url = "https://oauth2.googleapis.com/token"
+    payload = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "refresh_token": refresh_token,
+        "grant_type": "refresh_token"
     }
 
-    chosen_angle = angles.get(category, "Fresh perspective for readers")
-    title = f"{category}: {chosen_angle} ({today})"
+    response = requests.post(token_url, data=payload)
+    data = response.json()
 
-    # Ensure no duplicate titles (basic safeguard)
-    if title in recent_titles:
-        title += " [New Edition]"
-    recent_titles.append(title)
+    # Debugging log for GitHub Actions
+    print("Google OAuth response:", data)
 
-    # Structured content
+    if "access_token" not in data:
+        raise ValueError("❌ Failed to get access_token. Check your CLIENT_ID, CLIENT_SECRET, and REFRESH_TOKEN in GitHub secrets.")
+    
+    return data["access_token"]
+
+# ✅ Step 2: Generate a blog post (simple example – can be expanded with your rules)
+def generate_post():
+    topics = [
+        "5 Easy Recipes for Busy Weeknights",
+        "Top Travel Hacks for 2025",
+        "How to Stay Productive While Working from Home",
+        "Beginner’s Guide to Investing in Crypto Safely",
+        "10 Fashion Trends to Watch This Fall"
+    ]
+    title = random.choice(topics)
     content = f"""
-<h1>{title}</h1>
-<p><b>By Auto Blogger</b> | {today}</p>
-
-<h2>Introduction</h2>
-<p>Welcome! This post dives into <i>{chosen_angle}</i>.  
-If you’re looking for practical advice, inspiration, or simply a fresh perspective, you’re in the right place.  
-By the end of this read, you’ll walk away with actionable takeaways you can use immediately.</p>
-
-<h2>Main Content</h2>
-<h3>Why this matters</h3>
-<p>{chosen_angle} is becoming more important than ever. Readers today want fresh insights, not recycled advice. This blog brings you that freshness.</p>
-
-<h3>Key Insights</h3>
-<ul>
-  <li>Easy to apply tips</li>
-  <li>Focused on real-world use</li>
-  <li>Designed for today’s needs</li>
-</ul>
-
-<div style="border:1px solid #ccc; padding:10px; margin:15px 0;">
-<b>Pro Tip:</b> Keep experimenting and note what works for you.  
-Consistency is more powerful than intensity.
-</div>
-
-<h2>Example Scenario</h2>
-<p>For example, if someone applies {chosen_angle.lower()}, within just 30 days they can see noticeable improvement.  
-This isn’t theory — it’s been tested and shared by many readers.</p>
-
-<h2>Quick Checklist</h2>
-<ul>
-  <li>Step 1: Identify your current habits</li>
-  <li>Step 2: Pick one small change</li>
-  <li>Step 3: Apply it for one week</li>
-  <li>Step 4: Reflect and adjust</li>
-</ul>
-
-<h2>Conclusion</h2>
-<p>Thanks for reading! This post explored <b>{chosen_angle}</b> under the category <i>{category}</i>.  
-The goal is to help you take a small but meaningful step forward.  
-Remember — big results come from small, consistent actions.</p>
-
-<h2>Engage with us</h2>
-<p>Enjoyed this? Leave a comment with your thoughts or questions.</p>
-<p><i>Love practical reads like this? Follow the blog for three new posts every week (Mon, Wed, Fri).</i></p>
-
-<h2>What to read next</h2>
-<ul>
-  <li>[Link: Related Post 1]</li>
-  <li>[Link: Related Post 2]</li>
-  <li>[Link: Related Post 3]</li>
-</ul>
-"""
+    <h2>{title}</h2>
+    <p>This is an auto-generated blog post created on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.</p>
+    <p>Stay tuned for more updates every Monday, Wednesday, and Friday at 10:00 AM!</p>
+    """
     return title, content
 
-def post_to_blogger():
-    """Post generated blog to Blogger"""
-    access_token = get_access_token()
-    url = f"https://www.googleapis.com/blogger/v3/blogs/{BLOG_ID}/posts/"
+# ✅ Step 3: Publish to Blogger
+def publish_post(access_token, blog_id, title, content):
+    url = f"https://www.googleapis.com/blogger/v3/blogs/{blog_id}/posts/"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    post_data = {
+        "kind": "blogger#post",
+        "title": title,
+        "content": content
+    }
 
-    title, content = generate_blog_post()
-    headers = {"Authorization": f"Bearer {access_token}"}
-    body = {"kind": "blogger#post", "title": title, "content": content}
-
-    response = requests.post(url, headers=headers, json=body)
+    response = requests.post(url, headers=headers, json=post_data)
     if response.status_code == 200:
-        print("✅ Post published:", title)
+        print("✅ Post published successfully:", response.json()["url"])
     else:
-        print("❌ Error:", response.text)
+        print("❌ Failed to publish post:", response.text)
+        response.raise_for_status()
 
+# ✅ Step 4: Main script
 if __name__ == "__main__":
-    post_to_blogger()
+    BLOG_ID = os.environ["BLOG_ID"]  # comes from GitHub Secrets
+    access_token = get_access_token()
+    title, content = generate_post()
+    publish_post(access_token, BLOG_ID, title, content)
