@@ -1,24 +1,22 @@
 import os
+import random
 import requests
-from datetime import datetime
-import openai  # Make sure you install openai: pip install openai
 
 # -----------------------
-# 1. CONFIGURATION
+# CONFIGURATION
 # -----------------------
 BLOG_ID = os.environ.get("BLOG_ID")
 CLIENT_ID = os.environ.get("CLIENT_ID")
 CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
 REFRESH_TOKEN = os.environ.get("REFRESH_TOKEN")
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")  # Add this secret in GitHub
 
-if not BLOG_ID or not CLIENT_ID or not CLIENT_SECRET or not REFRESH_TOKEN or not OPENAI_API_KEY:
-    raise RuntimeError("Please set BLOG_ID, CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN, and OPENAI_API_KEY in GitHub Secrets")
+if not BLOG_ID or not CLIENT_ID or not CLIENT_SECRET or not REFRESH_TOKEN:
+    raise RuntimeError("Set BLOG_ID, CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN in GitHub Secrets")
 
-openai.api_key = OPENAI_API_KEY
+TEMPLATE_FOLDER = "blog_templates"
 
 # -----------------------
-# 2. GET ACCESS TOKEN
+# GET ACCESS TOKEN
 # -----------------------
 def get_access_token():
     url = "https://oauth2.googleapis.com/token"
@@ -36,32 +34,39 @@ def get_access_token():
     return result["access_token"]
 
 # -----------------------
-# 3. GENERATE BLOG CONTENT
+# LOAD RANDOM TEMPLATE
 # -----------------------
-def generate_blog_post(topic):
-    prompt = f"""
-    You are an expert blogger. Write a full blog post on the topic: "{topic}".
-    Requirements:
-    - 900–1300 words
-    - Include H1, H2, H3 sections
-    - TL;DR of 3–5 bullets after intro
-    - One callout box ("Pro Tip")
-    - Example scenario (3–6 sentences)
-    - Images with Markdown placeholders
-    - Meta title ≤ 60 chars, meta description 150–160 chars
-    - Conclusion with 4–6 sentences
-    - Two CTAs: comment & follow/subscribe
-    Output ONLY in Markdown.
-    """
-    response = openai.ChatCompletion.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7,
-    )
-    return response.choices[0].message.content
+def load_random_template():
+    files = [f for f in os.listdir(TEMPLATE_FOLDER) if f.endswith(".txt")]
+    if not files:
+        raise RuntimeError("No template files found in blog_templates/")
+    chosen_file = random.choice(files)
+    with open(os.path.join(TEMPLATE_FOLDER, chosen_file), "r") as f:
+        return f.read()
 
 # -----------------------
-# 4. POST TO BLOGGER
+# FORMAT BLOG CONTENT
+# -----------------------
+def parse_template(template_text):
+    # Very simple parsing: split by lines starting with keywords
+    lines = template_text.splitlines()
+    content = ""
+    title = ""
+    meta_title = ""
+    meta_desc = ""
+    for line in lines:
+        if line.startswith("Title:"):
+            title = line.replace("Title:", "").strip()
+        elif line.startswith("MetaTitle:"):
+            meta_title = line.replace("MetaTitle:", "").strip()
+        elif line.startswith("MetaDescription:"):
+            meta_desc = line.replace("MetaDescription:", "").strip()
+        else:
+            content += line + "\n"
+    return title, meta_title, meta_desc, content
+
+# -----------------------
+# POST TO BLOGGER
 # -----------------------
 def post_to_blogger(title, content):
     access_token = get_access_token()
@@ -79,23 +84,9 @@ def post_to_blogger(title, content):
         print(f"❌ Failed to post. Status: {response.status_code}, Response: {response.text}")
 
 # -----------------------
-# 5. MAIN LOGIC
+# MAIN
 # -----------------------
 if __name__ == "__main__":
-    # You can modify topics or pick randomly
-    topics = [
-        "Using Pomodoro for Deep Work",
-        "Top 10 Healthy Breakfast Recipes",
-        "Budget Travel Tips for Europe",
-        "How to Start a Productivity Journal",
-        "Review: The Latest Noise-Cancelling Headphones"
-    ]
-    
-    # Pick the next topic (rotate or random)
-    topic = topics[0]  # Replace with rotation logic if needed
-
-    print("Generating blog content...")
-    content = generate_blog_post(topic)
-
-    print("Posting to Blogger...")
-    post_to_blogger(topic, content)
+    template = load_random_template()
+    title, meta_title, meta_desc, content = parse_template(template)
+    post_to_blogger(title, content)
