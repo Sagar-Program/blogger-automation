@@ -1,23 +1,22 @@
 import os
-import random
 import requests
+import json
+import datetime
+import openai
 
-# -----------------------
-# CONFIGURATION
-# -----------------------
+# Load secrets from environment variables
 BLOG_ID = os.environ.get("BLOG_ID")
 CLIENT_ID = os.environ.get("CLIENT_ID")
 CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
 REFRESH_TOKEN = os.environ.get("REFRESH_TOKEN")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-if not BLOG_ID or not CLIENT_ID or not CLIENT_SECRET or not REFRESH_TOKEN:
-    raise RuntimeError("Set BLOG_ID, CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN in GitHub Secrets")
+if not all([BLOG_ID, CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN, OPENAI_API_KEY]):
+    raise RuntimeError("Please set all required secrets: BLOG_ID, CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN, OPENAI_API_KEY")
 
-TEMPLATE_FOLDER = "blog_templates"
+openai.api_key = OPENAI_API_KEY
 
-# -----------------------
-# GET ACCESS TOKEN
-# -----------------------
+# Step 1: Get access token from Google OAuth
 def get_access_token():
     url = "https://oauth2.googleapis.com/token"
     data = {
@@ -27,66 +26,71 @@ def get_access_token():
         "grant_type": "refresh_token",
     }
     response = requests.post(url, data=data)
-    result = response.json()
-    if "access_token" not in result:
-        print("Failed to get access_token. Response:", result)
+    resp_json = response.json()
+    if "access_token" not in resp_json:
+        print("Failed to get access_token:", resp_json)
         raise ValueError("access_token not found")
-    return result["access_token"]
+    return resp_json["access_token"]
 
-# -----------------------
-# LOAD RANDOM TEMPLATE
-# -----------------------
-def load_random_template():
-    files = [f for f in os.listdir(TEMPLATE_FOLDER) if f.endswith(".txt")]
-    if not files:
-        raise RuntimeError("No template files found in blog_templates/")
-    chosen_file = random.choice(files)
-    with open(os.path.join(TEMPLATE_FOLDER, chosen_file), "r") as f:
-        return f.read()
+# Step 2: Generate blog content from OpenAI
+def generate_blog_content():
+    prompt = """You are an expert blog writer.
+Follow these rules:
+- H1: 28–34px, bold, 8–12 words
+- H2/H3 for sections and subpoints
+- TL;DR 3–5 bullets after intro
+- Include callouts, example scenario, checklist
+- Include 1–2 images with captions
+- Meta title <=60 chars, meta desc 150–160 chars
+- Conclusion + 2 CTAs
+- Output HTML for Blogger
+- Length: 900–1300 words
 
-# -----------------------
-# FORMAT BLOG CONTENT
-# -----------------------
-def parse_template(template_text):
-    # Very simple parsing: split by lines starting with keywords
-    lines = template_text.splitlines()
-    content = ""
-    title = ""
-    meta_title = ""
-    meta_desc = ""
-    for line in lines:
-        if line.startswith("Title:"):
-            title = line.replace("Title:", "").strip()
-        elif line.startswith("MetaTitle:"):
-            meta_title = line.replace("MetaTitle:", "").strip()
-        elif line.startswith("MetaDescription:"):
-            meta_desc = line.replace("MetaDescription:", "").strip()
-        else:
-            content += line + "\n"
-    return title, meta_title, meta_desc, content
+Topic set: Personal Life, Food, Travel, How-To, Reviews, Finance, Productivity, Health, Fashion, Lists/Roundups
 
-# -----------------------
-# POST TO BLOGGER
-# -----------------------
-def post_to_blogger(title, content):
+Write a fresh, original post and provide:
+Title, MetaTitle, MetaDescription, HTML content, images with captions, CTAs.
+"""
+    response = openai.ChatCompletion.create(
+        model="gpt-4o-mini",
+        messages=[{"role":"user","content": prompt}],
+        temperature=0.7,
+        max_tokens=2500
+    )
+    content = response['choices'][0]['message']['content']
+    return content
+
+# Step 3: Post to Blogger
+def post_to_blogger(html_content, title, meta_title, meta_desc):
     access_token = get_access_token()
     url = f"https://www.googleapis.com/blogger/v3/blogs/{BLOG_ID}/posts/"
     headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
     data = {
         "kind": "blogger#post",
         "title": title,
-        "content": content
+        "content": html_content
     }
-    response = requests.post(url, headers=headers, json=data)
+    response = requests.post(url, headers=headers, data=json.dumps(data))
     if response.status_code == 200:
-        print(f"✅ Blog posted successfully: {title}")
+        print("Post successful:", title)
     else:
-        print(f"❌ Failed to post. Status: {response.status_code}, Response: {response.text}")
+        print("Failed to post:", response.text)
 
-# -----------------------
-# MAIN
-# -----------------------
+# Step 4: Main execution
 if __name__ == "__main__":
-    template = load_random_template()
-    title, meta_title, meta_desc, content = parse_template(template)
-    post_to_blogger(title, content)
+    blog_html = generate_blog_content()
+
+    # Extract Title, MetaTitle, MetaDescription from generated content
+    # For simplicity, assume HTML contains <!--TITLE: ...--> etc.
+    def extract_field(content, field):
+        start = f"<!--{field}:"
+        end = "-->"
+        if start in content:
+            return content.split(start)[1].split(end)[0].strip()
+        return field
+
+    title = extract_field(blog_html, "TITLE")
+    meta_title = extract_field(blog_html, "META_TITLE")
+    meta_desc = extract_field(blog_html, "META_DESC")
+
+    post_to_blogger(blog_html, title, meta_title, meta_desc)
