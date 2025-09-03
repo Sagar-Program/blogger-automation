@@ -2,29 +2,30 @@ name: Blogger Auto Post
 
 on:
   schedule:
-    - cron: '0 4 * * 1,3,5'  # Mon/Wed/Fri 10:00 AM IST = 4:00 UTC
-  workflow_dispatch:
+    - cron: '0 10 * * 1,3,5'  # Mon, Wed, Fri at 10:00 AM UTC
+  workflow_dispatch: # allows manual trigger
 
 jobs:
-  post_blog:
+  post-blog:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
 
-      - name: Install dependencies
-        run: pip install requests openai
+    - name: Install dependencies
+      run: pip install -r requirements.txt
 
-      - name: Run Blogger bot
-        run: python blog_post.py
-        env:
-          BLOG_ID: ${{ secrets.BLOG_ID }}
-          CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    - name: Run Blogger bot
+      run: python blog_post.py
+      env:
+        BLOG_ID: ${{ secrets.BLOG_ID }}
+        CLIENT_ID: ${{ secrets.CLIENT_ID }}
+        CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
