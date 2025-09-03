@@ -1,0 +1,21 @@
+Title: Morning Routine for Productive Days
+MetaTitle: Morning Routine for Productivity
+MetaDescription: Learn an effective morning routine to boost your productivity with simple steps.
+TLDR:
+- Wake up early
+- Plan your day
+- Start with small wins
+H2: Introduction
+Start your day with intention...
+H2: Steps
+H3: Wake up early
+Explain why...
+H3: Plan your day
+Explain why...
+Callout: Pro Tip - Focus on one task at a time.
+ExampleScenario: Imagine you wake up at 6 AM and complete your first task...
+Conclusion: Following these steps will help you...
+CTA1: Enjoyed this? Leave a comment.
+CTA2: Follow for new posts on Mon, Wed, Fri.
+Image1: ![Morning Routine](https://via.placeholder.com/600x400)
+Image2: ![Planning](https://via.placeholder.com/600x400)
