@@ -8,7 +8,7 @@ on:
   workflow_dispatch:  # allows manual trigger
 
 jobs:
-  build:
+  post-blog:
     runs-on: ubuntu-latest
 
     env:
@@ -19,16 +19,17 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-    - name: Install dependencies
-      run: pip install requests openai==0.28
+      - name: Install dependencies
+        run: pip install requests openai==0.28
 
-    - name: Run Blog Post Script
-      run: python blog_post.py
+      - name: Run blog_post.py
+        run: python blog_post.py
+
